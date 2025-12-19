@@ -1,0 +1,51 @@
+import pytest
+import pandas as pd
+from src.ml_engine.features import add_technical_indicators, interpret_signals
+
+# 1. Test Feature Engineering
+def test_technical_indicators():
+    # Create dummy data
+    data = {'Close': [100, 101, 102, 103, 104, 105] * 10,
+            'High': [105] * 60, 
+            'Low': [95] * 60,
+            'Volume': [1000] * 60}
+    df = pd.DataFrame(data)
+    
+    # Run function
+    df_processed = add_technical_indicators(df)
+    
+    # Assertions (Check if columns exist)
+    assert 'rsi' in df_processed.columns
+    assert 'macd' in df_processed.columns
+    assert 'sma_50' in df_processed.columns
+    # Check if calculation happened (not all NaNs)
+    assert df_processed['sma_50'].notna().any()
+
+# 2. Test Signal Logic
+def test_bearish_signals():
+    # Scenario: RSI is High (Overbought)
+    mock_metrics = {
+        "rsi": 85.0, # Extremely High
+        "macd": 2.0, "macd_signal": 1.0,
+        "sma_50": 150, "sma_200": 100,
+        "atr": 5.0
+    }
+    result = interpret_signals(150.0, mock_metrics)
+    
+    # We expect a warning about "Overbought"
+    signals = " ".join(result['signals'])
+    assert "Overbought" in signals
+
+def test_bullish_signals():
+    # Scenario: Golden Cross (SMA 50 > SMA 200)
+    mock_metrics = {
+        "rsi": 50.0,
+        "macd": 0, "macd_signal": 0,
+        "sma_50": 200, # Higher
+        "sma_200": 150, # Lower
+        "atr": 5.0
+    }
+    result = interpret_signals(200.0, mock_metrics)
+    
+    signals = " ".join(result['signals'])
+    assert "Golden Cross" in signals

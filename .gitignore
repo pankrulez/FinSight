@@ -1,0 +1,57 @@
+# --- Security (CRITICAL) ---
+.env
+.env.local
+secrets.json
+
+# --- Python & Environment ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Data (Local Only) ---
+# We ignore the files but keep the folder structure if you have .gitkeep files
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# --- Vector Database (Local Persistence) ---
+# ChromaDB or Pinecone local cache files
+data/vector_store/*
+!data/vector_store/.gitkeep
+chroma_db/
+.chroma/
+
+# --- Models ---
+# Large binary model files shouldn't go to git
+models/*.pt
+models/*.pth
+models/*.pkl
+models/*.bin
+models/*.h5
+
+# --- IDE & OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Testing & Coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Documentation ---
+# Ignore built docs, keep source
+docs/_build/
+
+# --- Logs ---
+*.log
+logs/
