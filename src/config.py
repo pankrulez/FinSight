@@ -16,6 +16,11 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 VECTOR_DB_DIR = DATA_DIR / "vector_store"
 MODEL_DIR = PROJECT_ROOT / "models"
 LOGS_DIR = PROJECT_ROOT / "logs"
+
+# --- THE MISSING LINE THAT CAUSED THE ERROR ---
+MODEL_PATH = MODEL_DIR / "price_predictor.pkl"
+# ----------------------------------------------
+
 LOG_FILE = LOGS_DIR / "app.log"
 
 # 3. Create Directories (CRITICAL STEP)
