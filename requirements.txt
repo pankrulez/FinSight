@@ -10,12 +10,12 @@ langgraph
 yfinance
 pandas
 numpy
+ta                    
 pysqlite3-binary
 sqlalchemy
 chromadb==0.4.22
 
 # --- AI & Machine Learning ---
-# We pin torch to a standard version from PyPI to avoid install errors
 torch>=2.1.0
 sentence-transformers==2.2.2
 transformers>=4.30.0
