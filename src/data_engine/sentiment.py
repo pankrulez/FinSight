@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_market_sentiment(ticker: str):
-    api_key = os.getenv("NEWS_API_KEY")
+    from src.config import NEWS_API_KEY
+    api_key = NEWS_API_KEY
     if not api_key:
         return {"score": 0, "label": "Neutral (No Key)", "top_headlines": []}
     
