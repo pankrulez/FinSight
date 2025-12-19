@@ -1,21 +1,27 @@
+# --- Core Framework ---
 python-dotenv
-yfinance
-pandas
-numpy
-ta
-scikit-learn
-xgboost
-joblib
+streamlit
 langchain
 langchain-groq
 langchain-community
 langgraph
-chromadb
-pypdf
-sentence-transformers
+
+# --- Data & Database ---
+yfinance
+pandas
+numpy
+pysqlite3-binary
+sqlalchemy
+chromadb==0.4.22
+
+# --- AI & Machine Learning ---
+# We pin torch to a standard version from PyPI to avoid install errors
+torch>=2.1.0
+sentence-transformers==2.2.2
+transformers>=4.30.0
+scikit-learn
+xgboost
+joblib
 vaderSentiment
 newsapi-python
-streamlit
 plotly
-sqlalchemy
-pysqlite3-binary
