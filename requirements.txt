@@ -1,27 +1,31 @@
-# --- Core Framework ---
-python-dotenv
+# --- Core App ---
 streamlit
+python-dotenv
+pysqlite3-binary
+
+# --- AI Framework ---
 langchain
-langchain-groq
 langchain-community
+langchain-core
+langchain-groq
 langgraph
 
-# --- Data & Database ---
+# --- Vector DB & Embeddings ---
+chromadb
+sentence-transformers
+torch
+
+# --- Data Science ---
 yfinance
 pandas
 numpy
-ta                    
-pysqlite3-binary
-sqlalchemy
-chromadb==0.4.22
-
-# --- AI & Machine Learning ---
-torch>=2.1.0
-sentence-transformers==2.2.2
-transformers>=4.30.0
+ta
 scikit-learn
 xgboost
 joblib
+sqlalchemy
+
+# --- Sentiment & UI ---
 vaderSentiment
 newsapi-python
 plotly
