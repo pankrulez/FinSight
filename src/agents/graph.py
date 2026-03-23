@@ -20,22 +20,39 @@ def report_node(state: AgentState):
     rag = state.get('rag_data', {})
     sent = state.get('sentiment_data', {})
     
-    # Format data for LLM
     metrics = quant.get('metrics', {})
-    quant_text = f"Price: ${metrics.get('current_price',0)}, RSI: {metrics.get('rsi',0)}, Signals: {quant.get('signals',[])}"
+    signals = quant.get('signals', [])
+    quant_text = f"Price: ${metrics.get('current_price',0)}, RSI: {metrics.get('rsi',0)}, Signals: {signals}"
     
     llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
-    prompt = f"""
-    Act as a Senior Analyst. Analyze {state['ticker']}.
     
-    DATA:
+    # UPGRADED ENTERPRISE PROMPT
+    prompt = f"""
+    You are a Senior Quantitative Analyst at a top-tier hedge fund. 
+    Write a concise, professional investment memo for {state['ticker']}.
+
+    DATA CONTEXT:
     1. Technicals: {quant_text}
     2. Sentiment: Score {sent.get('score',0)} ({sent.get('label','Neutral')})
-    3. Fundamentals: {rag.get('relevant_text','')}
+    3. Fundamentals/News: {rag.get('relevant_text','')}
     
-    Write a Markdown report. 
-    Executive Summary MUST be bullet points. 
-    Highlight any divergence between Price and Sentiment.
+    FORMATTING RULES:
+    - Use strict Markdown.
+    - Do NOT include pleasantries (e.g., "Here is the report"). Start immediately with the title.
+    - Keep it purely objective, data-driven, and highly scannable.
+
+    REQUIRED STRUCTURE:
+    ## Executive Summary
+    (3-4 bullet points highlighting the immediate takeaway, combining price action and sentiment).
+    
+    ## Technical Outlook
+    (Brief paragraph analyzing the RSI, moving averages, and XGBoost forecast).
+    
+    ## Catalyst & Sentiment Analysis
+    (Analyze the provided news/fundamentals. Highlight any divergence between the news and the price action).
+    
+    ## Strategic Posture
+    (A definitive concluding stance: Bullish, Bearish, or Neutral, with a 1-sentence justification).
     """
     
     response = llm.invoke([HumanMessage(content=prompt)])

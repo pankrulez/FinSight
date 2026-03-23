@@ -199,7 +199,35 @@ if 'active_ticker' in st.session_state:
 
             # --- TAB 3: REPORT ---
             with tab_report:
-                st.markdown(result['final_report'])
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                # Formal Memo Header
+                head_col1, head_col2 = st.columns([3, 1])
+                with head_col1:
+                    st.markdown(f"### 📑 Strategic Intelligence Memo: `{active_ticker}`")
+                    st.caption(f"**DATE:** Live | **CLASSIFICATION:** Internal | **AUTHOR:** FinSight AI (LLaMA-3)")
+                with head_col2:
+                    st.markdown("<br>", unsafe_allow_html=True) # Alignment push
+                    st.download_button(
+                        label="📥 Download Memo (.md)", 
+                        data=result['final_report'], 
+                        file_name=f"{active_ticker}_Research_Memo.md",
+                        use_container_width=True
+                    )
+                
+                st.divider()
+                
+                # Document Enclosure
+                with st.container(border=True):
+                    # Injecting a tiny bit of CSS just for the markdown text to make it read better
+                    st.markdown("""
+                        <style>
+                        .memo-text { font-family: 'Inter', sans-serif; line-height: 1.7; color: #e2e8f0; }
+                        .memo-text h1, .memo-text h2, .memo-text h3 { color: #10b981; }
+                        </style>
+                        """, unsafe_allow_html=True)
+                    
+                    st.markdown(f"<div class='memo-text'>{result['final_report']}</div>", unsafe_allow_html=True)
 
             # --- TAB 4: DEVELOPER ---
             with tab_dev:
