@@ -1,4 +1,5 @@
 import json
+import re
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
@@ -28,7 +29,7 @@ def report_node(state: AgentState):
     
     llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
     
-    # STRICT JSON PROMPT
+    # BULLETPROOF DELIMITER PROMPT
     prompt = f"""
     You are a Senior Quantitative Analyst. Analyze {state['ticker']}.
 
@@ -37,45 +38,44 @@ def report_node(state: AgentState):
     2. Sentiment: Score {sent.get('score',0)} ({sent.get('label','Neutral')})
     3. Fundamentals/News: {rag.get('relevant_text','')}
 
-    You MUST respond with a valid JSON object. Do not include introductory text.
-    The JSON object must contain exactly these two keys:
+    You MUST format your exact response using these specific tags. Do not add any text outside of these tags.
 
-    "pro_memo": A strict, professional Wall Street investment memo formatted in Markdown. 
-                Include an Executive Summary, Technical Outlook, Catalyst Analysis, and Strategic Posture.
-    "eli5_summary": A 2-3 sentence explanation of the data for a total beginner without financial jargon. Tell them what the data means for the stock.
+    [ELI5_SUMMARY]
+    (Write a 2-3 sentence explanation of the data for a total beginner without financial jargon here).
+    [/ELI5_SUMMARY]
+
+    [PRO_MEMO]
+    (Write the strict, professional Wall Street investment memo formatted in Markdown here. Include an Executive Summary, Technical Outlook, Catalyst Analysis, and Strategic Posture).
+    [/PRO_MEMO]
     """
     
     response = llm.invoke([HumanMessage(content=prompt)])
     
     try:
-        # Robust Parsing: Clean up the output in case the LLM wrapped it in markdown code blocks
+        # Extract the string safely
         content = response.content
         if isinstance(content, list):
-            # If it's a list of blocks, extract the text safely
             content = content[0].get("text", "") if isinstance(content[0], dict) else str(content[0])
             
-        raw_content = str(content).strip()
-        if raw_content.startswith("```json"):
-            raw_content = raw_content[7:]
-        elif raw_content.startswith("```"):
-            raw_content = raw_content[3:]
+        raw_content = str(content)
         
-        if raw_content.endswith("```"):
-            raw_content = raw_content[:-3]
-            
-        parsed_response = json.loads(raw_content.strip())
+        # Robust Parsing using Regex to find whatever is inside our custom tags
+        eli5_match = re.search(r'\[ELI5_SUMMARY\](.*?)\[/ELI5_SUMMARY\]', raw_content, re.DOTALL)
+        memo_match = re.search(r'\[PRO_MEMO\](.*?)\[/PRO_MEMO\]', raw_content, re.DOTALL)
+        
+        eli5_summary = eli5_match.group(1).strip() if eli5_match else "Could not generate beginner summary."
+        pro_memo = memo_match.group(1).strip() if memo_match else "Could not generate professional memo."
         
         return {
-            "final_report": parsed_response.get("pro_memo", "Memo generation failed."),
-            "eli5_summary": parsed_response.get("eli5_summary", "Summary unavailable.")
+            "final_report": pro_memo,
+            "eli5_summary": eli5_summary
         }
-    except json.JSONDecodeError as e:
-        # Fallback if the LLM disobeys the JSON constraint
-        print(f"JSON Parsing Error: {e}")
-        print(f"Raw Output: {response.content}")
+        
+    except Exception as e:
+        print(f"Parsing Error: {e}")
         return {
-            "final_report": response.content,
-            "eli5_summary": "Could not generate a simple summary because the AI did not return a valid JSON format."
+            "final_report": "Error parsing the LLM response.",
+            "eli5_summary": "Error parsing the LLM response."
         }
 
 def build_graph():

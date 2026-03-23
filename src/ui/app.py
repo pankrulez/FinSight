@@ -204,179 +204,154 @@ with st.sidebar:
     
     analyze_button = st.button("Run Analysis", type="primary", use_container_width=True)
 
-# --- STATE MANAGEMENT ---
+# --- STATE MANAGEMENT & UI ISOLATION ---
 if analyze_button:
     st.session_state['active_ticker'] = ticker
 
 if 'active_ticker' in st.session_state:
     active_ticker = st.session_state['active_ticker']
-    
     st.title(f"{active_ticker} Market Intelligence")
     
-    tab_dash, tab_backtest, tab_report, tab_dev, tab_guide = st.tabs([
-        "🚀 Dashboard", "📈 Strategy Backtest", "📝 Investment Memo", "🛠️ Developer Data", "📖 Guide"
-    ])
-    
+    # 1. STRICT DATA FETCHING BLOCK (Outside of UI rendering)
+    success = False
     with st.spinner(f"Aggregating real-time data for {active_ticker}..."):
         try:
             result = run_analysis_cached(active_ticker)
             quant, sent = result.get('quant_data', {}), result.get('sentiment_data', {})
             metrics, signals = quant.get('metrics', {}), quant.get('signals', [])
             backtest_results = perform_backtest(active_ticker)
-
-            # --- TAB 1: DASHBOARD ---
-            with tab_dash:
-                st.markdown("<br>", unsafe_allow_html=True)
-                
-                # 1. ELI5 Summary Block
-                eli5 = result.get('eli5_summary', "Update your src/agents/graph.py to generate the plain English summary!")
-                st.info(f"💡 **AI Translation:** {eli5}")
-                st.markdown("<br>", unsafe_allow_html=True)
-
-                # 2. Metric Cards with Tooltips
-                c1, c2, c3, c4 = st.columns(4)
-                with c1:
-                    render_custom_metric("Current Price", f"${metrics.get('current_price',0):.2f}", "Live Data", "neutral", "The most recent trading price of the asset.")
-                with c2:
-                    s_score = sent.get('score', 0)
-                    render_custom_metric("News Sentiment", f"{s_score:.2f}", sent.get('label', 'Neutral'), "up" if s_score > 0 else "down", "Analyzes recent news articles to see if the media is generally positive (Bullish) or negative (Bearish).")
-                with c3:
-                    pred_signal = next((s for s in signals if "ML Model" in s), None)
-                    pred = pred_signal.split(":")[-1].strip() if pred_signal else "Pending"
-                    render_custom_metric("AI Target", pred, "XGBoost Forecast", "up" if "1" else "down", "Our Machine Learning model's prediction for the next closing price based on historical patterns.") 
-                with c4:
-                    rsi = metrics.get('rsi', 0)
-                    render_custom_metric("RSI Momentum", f"{rsi:.1f}", "Overbought" if rsi>70 else "Oversold" if rsi<30 else "Neutral", "up" if rsi < 30 else "down", "Relative Strength Index. A score over 70 means the stock might be overpriced right now. Under 30 means it might be a bargain.")
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                
-                # 3. Educational Expander
-                with st.expander("📚 What do these numbers actually mean?", expanded=False):
-                    st.markdown("""
-                    * **AI Target:** We use an advanced algorithm (XGBoost) that looks at years of past data to guess where the price is heading next. 
-                    * **RSI (Relative Strength Index):** Think of this as a speedometer. If it's **Overbought** (above 70), the stock is moving too fast and might need to cool down (drop). If it's **Oversold** (below 30), it might be ready to bounce back up.
-                    * **Sentiment:** We read thousands of news headlines using GenAI. If the score is positive, the news is good. If it's negative, the media is currently worried about this company.
-                    * **Golden Cross / Death Cross:** A "Golden Cross" happens when short-term momentum overtakes long-term averages—it's a classic signal that a stock is entering a strong growth phase.
-                    """)
-
-                st.markdown("<br>", unsafe_allow_html=True)
-                chart_col, insight_col = st.columns([2.8, 1.2], gap="large")
-                
-                with chart_col:
-                    st.markdown("#### Price Action & Moving Averages")
-                    render_chart(active_ticker, quant.get('chart_data', {}))
-                    
-                with insight_col:
-                    st.markdown("#### Algorithmic Signals")
-                    for s in signals:
-                        if "Bullish" in s: st.success(s)
-                        elif "Bearish" in s: st.error(s)
-                        else: st.info(s)
-                    
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    st.markdown("#### Catalyst Drivers")
-                    for h in sent.get('top_headlines', [])[:3]: 
-                        st.info(f"📰 {h}")
-
-            # --- TAB 2: BACKTEST ---
-            with tab_backtest:
-                if backtest_results and "error" not in backtest_results:
-                    # 1. Plain English Storytelling
-                    initial = float(backtest_results['initial_capital'])
-                    final_strat = float(backtest_results['final_strategy_equity'])
-                    final_market = float(backtest_results['final_market_equity'])
-                    profit_diff = final_strat - final_market
-                    
-                    st.markdown("### 📖 The Plain English Translation")
-                    if profit_diff > 0:
-                        st.success(f"If you had invested **\${initial:,.0f}** using this AI strategy 5 years ago, you would have **\${final_strat:,.0f}** today. That is **\${profit_diff:,.0f} more** than if you had just bought and held the stock.")
-                    else:
-                        st.warning(f"If you had invested **\${initial:,.0f}** using this AI strategy 5 years ago, you would have **\${final_strat:,.0f}** today. For this specific stock, simply buying and holding the asset would have actually made you **\${abs(profit_diff):,.0f} more**.")
-                    
-                    st.divider()
-
-                    c1, c2, c3 = st.columns(3)
-                    strat_ret = float(backtest_results['strategy_return_pct'])
-                    market_ret = float(backtest_results['market_return_pct'])
-                    
-                    with c1: render_custom_metric("Initial Capital", f"${initial:,.0f}", "Starting Balance", "neutral", "The simulated starting amount.")
-                    with c2: render_custom_metric("Strategy Return", f"{strat_ret}%", f"{strat_ret - market_ret:.2f}% Alpha", "up" if strat_ret > market_ret else "down", "Total return using the algorithmic trading rules.")
-                    with c3: render_custom_metric("Buy & Hold Return", f"{market_ret}%", "S&P Baseline", "neutral", "Total return if you simply bought the stock on day 1 and never sold.")
-                    
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    render_backtest_chart(backtest_results)
-                    st.info("Strategy Logic: Buy when the short-term trend (SMA 50) crosses above the long-term trend (SMA 200). Move to Cash when it drops below.")
-                else:
-                    st.error("Backtest failed. Not enough historical data.")
-
-            # --- TAB 3: REPORT ---
-            with tab_report:
-                st.markdown("<br>", unsafe_allow_html=True)
-                head_col1, head_col2 = st.columns([3, 1])
-                with head_col1:
-                    st.markdown(f"### 📑 Strategic Intelligence Memo: `{active_ticker}`")
-                    st.caption(f"**DATE:** Live | **CLASSIFICATION:** Internal | **AUTHOR:** FinSight AI")
-                with head_col2:
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    st.download_button(
-                        label="📥 Download Memo (.md)", 
-                        data=result['final_report'], 
-                        file_name=f"{active_ticker}_Research_Memo.md",
-                        use_container_width=True
-                    )
-                st.divider()
-                with st.container(border=True):
-                    st.markdown(result['final_report'])
-
-            # --- TAB 4: DEVELOPER & DATA OPS ---
-            with tab_dev:
-                st.markdown("### ⚙️ System Operations")
-                st.caption("Trigger backend ML and Data Engineering pipelines directly from the cloud environment.")
-                
-                # Import the functions dynamically to avoid circular imports
-                from src.data_engine.ingestor_rag import ingest_fundamental_data
-                from src.ml_engine.trainer import train_model
-                
-                # Use columns to put the operational buttons side-by-side
-                op_col1, op_col2 = st.columns(2)
-                
-                with op_col1:
-                    with st.container(border=True):
-                        st.markdown("#### 📚 RAG Pipeline")
-                        st.caption("Fetches live Yahoo Finance news and company profiles to rebuild the Vector DB.")
-                        if st.button(f"Update AI Knowledge Base", type="secondary", use_container_width=True):
-                            with st.spinner(f"Indexing live data for {active_ticker}..."):
-                                try:
-                                    ingest_fundamental_data(active_ticker)
-                                    st.success(f"Vector DB rebuilt for {active_ticker}!")
-                                except Exception as e:
-                                    st.error(f"Ingestion failed: {e}")
-                                    
-                with op_col2:
-                    with st.container(border=True):
-                        st.markdown("#### 🧠 ML Pipeline")
-                        st.caption("Fetches 10 years of historical data and retrains the XGBoost predictive model.")
-                        if st.button(f"Retrain XGBoost Model", type="primary", use_container_width=True):
-                            with st.spinner(f"Training ML model on 10 years of {active_ticker} data..."):
-                                try:
-                                    metrics = train_model(active_ticker)
-                                    if metrics.get("status") == "success":
-                                        st.success(f"Model retrained! Margin of Error: ±${metrics['mean_absolute_error']}")
-                                    else:
-                                        st.error(metrics.get("message", "Unknown error occurred."))
-                                except Exception as e:
-                                    st.error(f"Training failed: {e}")
-                
-                st.divider()
-                st.markdown("#### Raw System State Payload")
-                st.json(result)
-
-            # --- TAB 5: GUIDE ---
-            with tab_guide:
-                render_guide(is_tab=True)
-
+            success = True
         except Exception as e:
-            st.error(f"Analysis Failed: {e}")
+            error_message = str(e)
+
+    # 2. STRICT UI RENDERING BLOCK (Only runs if data fetching succeeded)
+    if success:
+        tab_dash, tab_backtest, tab_report, tab_dev, tab_guide = st.tabs([
+            "🚀 Dashboard", "📈 Strategy Backtest", "📝 Investment Memo", "🛠️ Developer Data", "📖 Guide"
+        ])
+        
+        # --- TAB 1: DASHBOARD ---
+        with tab_dash:
+            st.markdown("<br>", unsafe_allow_html=True)
+            eli5 = result.get('eli5_summary', "Update your src/agents/graph.py to generate the plain English summary!")
+            st.info(f"💡 **AI Translation:** {eli5}")
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: render_custom_metric("Current Price", f"${metrics.get('current_price',0):.2f}", "Live Data", "neutral", "The most recent trading price.")
+            with c2:
+                s_score = sent.get('score', 0)
+                render_custom_metric("News Sentiment", f"{s_score:.2f}", sent.get('label', 'Neutral'), "up" if s_score > 0 else "down", "Analyzes recent news articles.")
+            with c3:
+                pred_signal = next((s for s in signals if "ML Model" in s), None)
+                pred = pred_signal.split(":")[-1].strip() if pred_signal else "Pending"
+                render_custom_metric("AI Target", pred, "XGBoost Forecast", "up" if "1" else "down", "Prediction for next closing price.") 
+            with c4:
+                rsi = metrics.get('rsi', 0)
+                render_custom_metric("RSI Momentum", f"{rsi:.1f}", "Overbought" if rsi>70 else "Oversold" if rsi<30 else "Neutral", "up" if rsi < 30 else "down", "Relative Strength Index.")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("📚 What do these numbers actually mean?", expanded=False):
+                st.markdown("""
+                * **AI Target:** We use an advanced algorithm (XGBoost) to guess where the price is heading next. 
+                * **RSI:** If it's **Overbought** (above 70), the stock is moving too fast. If it's **Oversold** (below 30), it might be ready to bounce back up.
+                * **Sentiment:** We read thousands of news headlines using GenAI. Positive score = good news.
+                """)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            chart_col, insight_col = st.columns([2.8, 1.2], gap="large")
+            with chart_col:
+                st.markdown("#### Price Action & Moving Averages")
+                render_chart(active_ticker, quant.get('chart_data', {}))
+            with insight_col:
+                st.markdown("#### Algorithmic Signals")
+                for s in signals:
+                    if "Bullish" in s: st.success(s)
+                    elif "Bearish" in s: st.error(s)
+                    else: st.info(s)
+                st.markdown("<br>#### Catalyst Drivers", unsafe_allow_html=True)
+                for h in sent.get('top_headlines', [])[:3]: st.info(f"📰 {h}")
+
+        # --- TAB 2: BACKTEST ---
+        with tab_backtest:
+            if backtest_results and "error" not in backtest_results:
+                initial = float(backtest_results['initial_capital'])
+                final_strat = float(backtest_results['final_strategy_equity'])
+                final_market = float(backtest_results['final_market_equity'])
+                profit_diff = final_strat - final_market
+                
+                st.markdown("### 📖 The Plain English Translation")
+                if profit_diff > 0:
+                    st.success(f"If you had invested **\${initial:,.0f}** using this AI strategy 5 years ago, you would have **\${final_strat:,.0f}** today. That is **\${profit_diff:,.0f} more** than if you had just bought and held the stock.")
+                else:
+                    st.warning(f"If you had invested **\${initial:,.0f}** using this AI strategy 5 years ago, you would have **\${final_strat:,.0f}** today. For this specific stock, simply buying and holding the asset would have actually made you **\${abs(profit_diff):,.0f} more**.")
+                st.divider()
+
+                c1, c2, c3 = st.columns(3)
+                strat_ret = float(backtest_results['strategy_return_pct'])
+                market_ret = float(backtest_results['market_return_pct'])
+                with c1: render_custom_metric("Initial Capital", f"${initial:,.0f}", "Starting Balance", "neutral")
+                with c2: render_custom_metric("Strategy Return", f"{strat_ret}%", f"{strat_ret - market_ret:.2f}% Alpha", "up" if strat_ret > market_ret else "down")
+                with c3: render_custom_metric("Buy & Hold Return", f"{market_ret}%", "S&P Baseline", "neutral")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                render_backtest_chart(backtest_results)
+                st.info("Strategy Logic: Buy when short-term trend (SMA 50) > long-term trend (SMA 200).")
+            else:
+                st.error("Backtest failed. Not enough historical data.")
+
+        # --- TAB 3: REPORT ---
+        with tab_report:
+            st.markdown("<br>", unsafe_allow_html=True)
+            head_col1, head_col2 = st.columns([3, 1])
+            with head_col1:
+                st.markdown(f"### 📑 Strategic Intelligence Memo: `{active_ticker}`")
+                st.caption(f"**DATE:** Live | **CLASSIFICATION:** Internal | **AUTHOR:** FinSight AI")
+            with head_col2:
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.download_button("📥 Download Memo (.md)", data=result['final_report'], file_name=f"{active_ticker}_Research_Memo.md", use_container_width=True)
+            st.divider()
+            with st.container(border=True):
+                st.markdown(result['final_report'])
+
+        # --- TAB 4: DEVELOPER ---
+        with tab_dev:
+            st.markdown("### ⚙️ System Operations")
+            from src.data_engine.ingestor_rag import ingest_fundamental_data
+            from src.ml_engine.trainer import train_model
+            
+            op_col1, op_col2 = st.columns(2)
+            with op_col1:
+                with st.container(border=True):
+                    st.markdown("#### 📚 RAG Pipeline")
+                    if st.button(f"Update AI Knowledge Base", type="secondary", use_container_width=True):
+                        with st.spinner(f"Indexing live data for {active_ticker}..."):
+                            try:
+                                ingest_fundamental_data(active_ticker)
+                                st.success(f"Vector DB rebuilt for {active_ticker}!")
+                            except Exception as e:
+                                st.error(f"Ingestion failed: {e}")
+            with op_col2:
+                with st.container(border=True):
+                    st.markdown("#### 🧠 ML Pipeline")
+                    if st.button(f"Retrain XGBoost Model", type="primary", use_container_width=True):
+                        with st.spinner(f"Training ML model..."):
+                            try:
+                                metrics = train_model(active_ticker)
+                                if metrics.get("status") == "success": st.success(f"Model retrained! Margin of Error: ±${metrics['mean_absolute_error']}")
+                                else: st.error(metrics.get("message", "Unknown error."))
+                            except Exception as e:
+                                st.error(f"Training failed: {e}")
+            st.divider()
+            st.markdown("#### Raw System State Payload")
+            st.json(result)
+
+        # --- TAB 5: GUIDE ---
+        with tab_guide:
+            render_guide(is_tab=True)
+    else:
+        st.error(f"Analysis Failed: {error_message}")
+        
 else:
     # Shows the full Hero UI before the user clicks "Run Analysis"
     render_guide(is_tab=False)
