@@ -1,0 +1,1 @@
+{"ticker_trained_on": "AAPL", "training_rows": 1851, "testing_rows": 463, "mean_absolute_error": 43.6, "mean_squared_error": 2483.76, "status": "success"}

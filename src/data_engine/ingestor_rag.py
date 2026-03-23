@@ -1,47 +1,67 @@
-# src/data_engine/ingestor_rag.py
-
+import yfinance as yf
 from langchain_core.documents import Document
-# --- CHANGED: Use Local Embeddings instead of OpenAI ---
 from langchain_community.embeddings import HuggingFaceEmbeddings 
 from langchain_community.vectorstores import Chroma
 from src.config import VECTOR_DB_DIR
-import shutil
 import os
 
-def ingest_mock_data(ticker: str):
+def ingest_fundamental_data(ticker: str):
     """
-    Creates a dummy knowledge base for testing using Free Local Embeddings.
+    Fetches REAL company profiles and recent news from yfinance 
+    and embeds them into the local Chroma vector database.
     """
-    print(f"📚 Indexing mock data for {ticker}...")
+    print(f"📚 Indexing real fundamental data for {ticker}...")
+    stock = yf.Ticker(ticker)
+    docs = []
     
-    # 1. Define Dummy Data
-    texts = [
-        f"{ticker} reported a 10% increase in revenue due to AI adoption.",
-        f"Key risks for {ticker} include supply chain disruptions in Asia.",
-        f"{ticker} is facing a lawsuit regarding patent infringement.",
-        f"Analysts project {ticker} will expand into the automotive sector next year."
-    ]
-    
-    docs = [Document(page_content=t) for t in texts]
-    
-    # 2. Initialize Free Embeddings (Runs on your CPU)
+    # 1. Fetch Company Profile (The "What do they do?" factor)
+    try:
+        info = stock.info
+        summary = info.get('longBusinessSummary', '')
+        if summary:
+            docs.append(Document(
+                page_content=f"Company Profile: {summary}",
+                metadata={"source": "yfinance_profile", "type": "fundamental"}
+            ))
+    except Exception as e:
+        print(f"   ⚠️ Could not fetch profile: {e}")
+
+    # 2. Fetch Recent News Headlines (The "What is happening now?" factor)
+    try:
+        news = stock.news
+        for article in news[:5]: # Grab the top 5 most recent articles
+            title = article.get('title', '')
+            publisher = article.get('publisher', '')
+            content = f"Recent News: {title} (Published by {publisher})"
+            docs.append(Document(
+                page_content=content,
+                metadata={"source": "yfinance_news", "type": "news"}
+            ))
+    except Exception as e:
+        print(f"   ⚠️ Could not fetch news: {e}")
+
+    if not docs:
+        print(f"❌ No text data found to index for {ticker}.")
+        return
+
+    # 3. Initialize Free Embeddings (Runs on your CPU)
     print("   Loading local embedding model (all-MiniLM-L6-v2)...")
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     
-    # 3. CRITICAL: Clean up old OpenAI DB to prevent conflicts
-    # If you try to mix OpenAI vectors with HuggingFace vectors, it crashes.
-    collection_name = f"{ticker}_10k"
+    # Use a distinct collection name for the real data
+    collection_name = f"{ticker}_fundamentals"
     
-    # Create the Vector Database
-    print(f"   Saving to {VECTOR_DB_DIR}...")
+    # 4. Save to Chroma DB
+    print(f"   Saving {len(docs)} documents to Chroma DB...")
     Chroma.from_documents(
         documents=docs, 
         embedding=embeddings, 
         persist_directory=str(VECTOR_DB_DIR),
         collection_name=collection_name
     )
-    print("✅ Vector DB populated successfully (Free Mode).")
+    print(f"✅ Vector DB populated successfully for {ticker}.")
 
 if __name__ == "__main__":
-    # Test with Apple
-    ingest_mock_data("AAPL")
+    # Test with a few major tickers
+    for t in ["AAPL", "NVDA", "TSLA"]:
+        ingest_fundamental_data(t)

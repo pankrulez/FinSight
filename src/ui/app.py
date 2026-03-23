@@ -248,11 +248,80 @@ if 'active_ticker' in st.session_state:
                 with st.container(border=True):
                     st.markdown(result['final_report'])
 
-            # --- TAB 4: DEVELOPER ---
+            # --- TAB 4: DEVELOPER & DATA OPS ---
             with tab_dev:
+                st.markdown("### ⚙️ System Operations")
+                st.caption("Trigger backend ML and Data Engineering pipelines directly from the cloud environment.")
+                
+                # Import the functions dynamically to avoid circular imports
+                from src.data_engine.ingestor_rag import ingest_fundamental_data
+                from src.ml_engine.trainer import train_model
+                
+                # Use columns to put the operational buttons side-by-side
+                op_col1, op_col2 = st.columns(2)
+                
+                with op_col1:
+                    with st.container(border=True):
+                        st.markdown("#### 📚 RAG Pipeline")
+                        st.caption("Fetches live Yahoo Finance news and company profiles to rebuild the Vector DB.")
+                        if st.button(f"Update AI Knowledge Base", type="secondary", use_container_width=True):
+                            with st.spinner(f"Indexing live data for {active_ticker}..."):
+                                try:
+                                    ingest_fundamental_data(active_ticker)
+                                    st.success(f"Vector DB rebuilt for {active_ticker}!")
+                                except Exception as e:
+                                    st.error(f"Ingestion failed: {e}")
+                                    
+                with op_col2:
+                    with st.container(border=True):
+                        st.markdown("#### 🧠 ML Pipeline")
+                        st.caption("Fetches 10 years of historical data and retrains the XGBoost predictive model.")
+                        if st.button(f"Retrain XGBoost Model", type="primary", use_container_width=True):
+                            with st.spinner(f"Training ML model on 10 years of {active_ticker} data..."):
+                                try:
+                                    metrics = train_model(active_ticker)
+                                    if metrics.get("status") == "success":
+                                        st.success(f"Model retrained! Margin of Error: ±${metrics['mean_absolute_error']}")
+                                    else:
+                                        st.error(metrics.get("message", "Unknown error occurred."))
+                                except Exception as e:
+                                    st.error(f"Training failed: {e}")
+                
+                st.divider()
+                st.markdown("#### Raw System State Payload")
                 st.json(result)
 
         except Exception as e:
             st.error(f"Analysis Failed: {e}")
 else:
-    st.info("👈 Configure your asset parameters in the sidebar and initialize the engine.")
+    # --- PROFESSIONAL ONBOARDING SCREEN ---
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # Use columns to center the welcome message
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("<h1 style='text-align: center; color: #f3f4f6;'>Welcome to FinSight Pro ⚡</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #10b981; font-size: 1.2rem;'>Your AI-Powered Quantitative Market Analyst</p>", unsafe_allow_html=True)
+        
+        st.divider()
+        
+        st.markdown("### 📖 Quick Start Guide")
+        
+        # Use a container to make the instructions look like a clean card
+        with st.container(border=True):
+            st.markdown("""
+            **1. Select Your Asset:** Use the sidebar panel on the left to choose a Stock, Cryptocurrency, or enter a Custom Ticker symbol (e.g., AMD).
+            
+            **2. Initialize the Engine:** Click the primary **Run Analysis** button. The system will fetch live market data, calculate technical indicators, and run the XGBoost machine learning forecasts.
+            
+            **3. Update the AI's Knowledge Base (Optional):** If you want the AI Investment Memo to include the *very latest* news headlines:
+            * Navigate to the **🛠️ Developer Data** tab.
+            * Click the **Update AI Knowledge Base** button to rebuild the local vector database.
+            * Click **Run Analysis** one more time to generate a fresh memo with the new data.
+            
+            **4. Explore the Insights:** Navigate through the tabs to view algorithmic charts, simulate historical trading strategies, and read plain-English GenAI translations of complex metrics.
+            """)
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.info("👈 **Get started by selecting a symbol in the sidebar!**")
