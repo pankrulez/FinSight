@@ -110,6 +110,86 @@ def render_backtest_chart(backtest_res):
     )
     st.plotly_chart(fig, use_container_width=True)
 
+# --- REUSABLE ONBOARDING UI ---
+def render_guide(is_tab=False):
+    """Renders the onboarding grid. Adapts layout based on where it is displayed."""
+    if not is_tab:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("""
+            <div style="text-align: center; margin-bottom: 40px; font-family: 'Inter', sans-serif;">
+                <h1 style="color: #f3f4f6; font-size: 3.5rem; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.02em;">
+                    FinSight <span style="color: #10b981;">Pro</span>
+                </h1>
+                <p style="color: #9ca3af; font-size: 1.2rem; font-weight: 400;">Your AI-Powered Quantitative Market Analyst</p>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("### 📖 How to use FinSight Pro")
+        st.caption("Refer back to these steps anytime to maximize your analysis.")
+        st.markdown("<br>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2, gap="large")
+    
+    with col1:
+        st.markdown("""
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #3b82f6; border-radius: 12px; padding: 24px; height: 180px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <span style="font-size: 1.5rem;">🎯</span>
+                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">1. Select Your Asset</span>
+            </div>
+            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
+                Use the sidebar panel on the left to choose a standard Stock, Cryptocurrency, or enter a Custom Ticker symbol (e.g., AMD).
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #10b981; border-radius: 12px; padding: 24px; height: 180px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <span style="font-size: 1.5rem;">🧠</span>
+                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">3. Explore AI Insights</span>
+            </div>
+            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
+                Navigate through the tabs to view algorithmic charts, backtest strategies, and read plain-English GenAI translations of complex metrics.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #f59e0b; border-radius: 12px; padding: 24px; height: 180px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <span style="font-size: 1.5rem;">⚡</span>
+                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">2. Initialize Engine</span>
+            </div>
+            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
+                Click the primary <b style="color: #e2e8f0;">Run Analysis</b> button. The system will fetch live market data and execute the XGBoost machine learning forecasts.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #8b5cf6; border-radius: 12px; padding: 24px; height: 180px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <span style="font-size: 1.5rem;">🔄</span>
+                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">4. Update Knowledge</span>
+            </div>
+            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
+                Go to the <b style="color: #e2e8f0;">Developer Data</b> tab and click <i>Update AI Knowledge Base</i> to fetch the absolute latest news for the memo.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    if not is_tab:
+        st.markdown("""
+            <div style="text-align: center; margin-top: 50px;">
+                <span style="background-color: rgba(16, 185, 129, 0.1); color: #10b981; padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 1rem; border: 1px solid rgba(16, 185, 129, 0.2); font-family: 'Inter', sans-serif; letter-spacing: 0.02em;">
+                    👈 Configure your asset in the sidebar to begin
+                </span>
+            </div>
+        """, unsafe_allow_html=True)
+
+
 # --- SIDEBAR CONTROL PANEL ---
 with st.sidebar:
     st.markdown("### ⚡ FinSight Pro")
@@ -133,8 +213,8 @@ if 'active_ticker' in st.session_state:
     
     st.title(f"{active_ticker} Market Intelligence")
     
-    tab_dash, tab_backtest, tab_report, tab_dev = st.tabs([
-        "🚀 Dashboard", "📈 Strategy Backtest", "📝 Investment Memo", "🛠️ Developer Data"
+    tab_dash, tab_backtest, tab_report, tab_dev, tab_guide = st.tabs([
+        "🚀 Dashboard", "📈 Strategy Backtest", "📝 Investment Memo", "🛠️ Developer Data", "📖 Guide"
     ])
     
     with st.spinner(f"Aggregating real-time data for {active_ticker}..."):
@@ -209,9 +289,9 @@ if 'active_ticker' in st.session_state:
                     
                     st.markdown("### 📖 The Plain English Translation")
                     if profit_diff > 0:
-                        st.success(f"If you had invested **${initial:,.0f}** using this AI strategy 5 years ago, you would have **${final_strat:,.0f}** today. That is **${profit_diff:,.0f} more** than if you had just bought and held the stock.")
+                        st.success(f"If you had invested **\${initial:,.0f}** using this AI strategy 5 years ago, you would have **\${final_strat:,.0f}** today. That is **\${profit_diff:,.0f} more** than if you had just bought and held the stock.")
                     else:
-                        st.warning(f"If you had invested **${initial:,.0f}** using this AI strategy 5 years ago, you would have **${final_strat:,.0f}** today. For this specific stock, simply buying and holding the asset would have actually made you **${abs(profit_diff):,.0f} more**.")
+                        st.warning(f"If you had invested **\${initial:,.0f}** using this AI strategy 5 years ago, you would have **\${final_strat:,.0f}** today. For this specific stock, simply buying and holding the asset would have actually made you **\${abs(profit_diff):,.0f} more**.")
                     
                     st.divider()
 
@@ -291,81 +371,12 @@ if 'active_ticker' in st.session_state:
                 st.markdown("#### Raw System State Payload")
                 st.json(result)
 
+            # --- TAB 5: GUIDE ---
+            with tab_guide:
+                render_guide(is_tab=True)
+
         except Exception as e:
             st.error(f"Analysis Failed: {e}")
-
 else:
-    # --- PREMIUM ONBOARDING SCREEN ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # 1. Hero Section
-    st.markdown("""
-        <div style="text-align: center; margin-bottom: 40px; font-family: 'Inter', sans-serif;">
-            <h1 style="color: #f3f4f6; font-size: 3.5rem; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.02em;">
-                FinSight <span style="color: #10b981;">Pro</span>
-            </h1>
-            <p style="color: #9ca3af; font-size: 1.2rem; font-weight: 400;">Your AI-Powered Quantitative Market Analyst</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # 2. Grid Layout for the Cards
-    col1, col2 = st.columns(2, gap="large")
-    
-    with col1:
-        st.markdown("""
-        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #3b82f6; border-radius: 12px; padding: 24px; height: 180px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">🎯</span>
-                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">1. Select Your Asset</span>
-            </div>
-            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
-                Use the sidebar panel on the left to choose a standard Stock, Cryptocurrency, or enter a Custom Ticker symbol (e.g., AMD).
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #10b981; border-radius: 12px; padding: 24px; height: 180px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">🧠</span>
-                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">3. Explore AI Insights</span>
-            </div>
-            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
-                Navigate through the tabs to view algorithmic charts, backtest strategies, and read plain-English GenAI translations of complex metrics.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #f59e0b; border-radius: 12px; padding: 24px; height: 180px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">⚡</span>
-                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">2. Initialize Engine</span>
-            </div>
-            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
-                Click the primary <b style="color: #e2e8f0;">Run Analysis</b> button. The system will fetch live market data and execute the XGBoost machine learning forecasts.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #8b5cf6; border-radius: 12px; padding: 24px; height: 180px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">🔄</span>
-                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">4. Update Knowledge (Optional)</span>
-            </div>
-            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
-                Go to the <b style="color: #e2e8f0;">Developer Data</b> tab and click <i>Update AI Knowledge Base</i> to fetch the absolute latest news for the memo.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # 3. Call to Action Footer
-    st.markdown("""
-        <div style="text-align: center; margin-top: 50px;">
-            <span style="background-color: rgba(16, 185, 129, 0.1); color: #10b981; padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 1rem; border: 1px solid rgba(16, 185, 129, 0.2); font-family: 'Inter', sans-serif; letter-spacing: 0.02em;">
-                👈 Configure your asset in the sidebar to begin
-            </span>
-        </div>
-    """, unsafe_allow_html=True)
+    # Shows the full Hero UI before the user clicks "Run Analysis"
+    render_guide(is_tab=False)
