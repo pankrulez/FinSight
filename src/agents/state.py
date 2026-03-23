@@ -7,3 +7,4 @@ class AgentState(TypedDict):
     rag_data: Dict[str, Any]        # Role B
     sentiment_data: Dict[str, Any]  # Role D
     final_report: str               # Role C
+    eli5_summary: str               # NEW: The beginner-friendly translation
