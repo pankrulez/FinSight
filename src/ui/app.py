@@ -176,7 +176,7 @@ if 'active_ticker' in st.session_state:
                         elif "Bearish" in s: st.error(s)
                         else: st.info(s)
                     
-                    st.markdown("<br>#### Catalyst Drivers", unsafe_allow_html=True)
+                    st.markdown("#### Catalyst Drivers", unsafe_allow_html=True)
                     for h in sent.get('top_headlines', [])[:3]: 
                         st.info(f"📰 {h}")
 
@@ -205,9 +205,9 @@ if 'active_ticker' in st.session_state:
                 head_col1, head_col2 = st.columns([3, 1])
                 with head_col1:
                     st.markdown(f"### 📑 Strategic Intelligence Memo: `{active_ticker}`")
-                    st.caption(f"**DATE:** Live | **CLASSIFICATION:** Internal | **AUTHOR:** FinSight AI (LLaMA-3)")
+                    st.caption(f"**DATE:** Live | **CLASSIFICATION:** Internal | **AUTHOR:** FinSight AI")
                 with head_col2:
-                    st.markdown("<br>", unsafe_allow_html=True) # Alignment push
+                    st.markdown("<br>", unsafe_allow_html=True)
                     st.download_button(
                         label="📥 Download Memo (.md)", 
                         data=result['final_report'], 
@@ -219,15 +219,8 @@ if 'active_ticker' in st.session_state:
                 
                 # Document Enclosure
                 with st.container(border=True):
-                    # Injecting a tiny bit of CSS just for the markdown text to make it read better
-                    st.markdown("""
-                        <style>
-                        .memo-text { font-family: 'Inter', sans-serif; line-height: 1.7; color: #e2e8f0; }
-                        .memo-text h1, .memo-text h2, .memo-text h3 { color: #10b981; }
-                        </style>
-                        """, unsafe_allow_html=True)
-                    
-                    st.markdown(f"<div class='memo-text'>{result['final_report']}</div>", unsafe_allow_html=True)
+                    # By removing the HTML div, standard Markdown will now render perfectly
+                    st.markdown(result['final_report'])
 
             # --- TAB 4: DEVELOPER ---
             with tab_dev:
