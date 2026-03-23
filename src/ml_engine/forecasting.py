@@ -1,59 +1,50 @@
+# src/ml_engine/forecasting.py
 import yfinance as yf
 import pandas as pd
 import joblib
-from src.config import logger
 from src.config import MODEL_PATH
 from src.ml_engine.features import add_technical_indicators, interpret_signals
-from src.data_engine.database import get_stock_data # <--- Reads from your SQL DB
 
 def get_technical_analysis(ticker: str, period="1y"):
     """
-    Fetches data (DB first, then Live), runs indicators, ML inference, 
-    and prepares data for the Dashboard charts.
+    Fetches live data, calculates technical indicators, 
+    and runs the XGBoost model to predict the next closing price.
     """
-    print(f"📊 Running Technical Analysis for {ticker}...")
+    print(f"📊 Running Technical Analysis & ML Inference for {ticker}...")
 
-    # 1. Fetch Data (Hybrid Strategy: Cache-First)
-    # Try reading from the local database first (Fast)
-    df = get_stock_data(ticker)
-    
-    # If DB is empty or missing this ticker, fallback to API (Slow but reliable)
-    if df.empty:
-        print(f"⚠️ {ticker} not found in Database. Fetching live from Yahoo Finance...")
-        stock = yf.Ticker(ticker)
-        df = stock.history(period="2y") # Fetch enough for 200 SMA
+    # 1. Fetch Live Data (Optimized for Cloud Deployment)
+    stock = yf.Ticker(ticker)
+    df = stock.history(period="2y") # Fetch enough history to calculate the 200-day SMA
     
     if df.empty:
         return {"error": f"No data found for {ticker} (Check symbol or internet)."}
 
-    # 2. Add Technical Indicators (RSI, MACD, Bollinger, ATR, etc.)
+    # 2. Add Technical Indicators
     df = add_technical_indicators(df)
     
-    # Filter data based on requested period to keep payload light
-    # (But keep enough buffer for lookback calculations if needed later)
-    if period == "1y":
-        df = df.tail(300) 
-    
-    # Get the latest row for "Current" metrics
+    # Get the very last row for our "Current" snapshot
     latest = df.iloc[-1]
     
     # 3. Machine Learning Inference
-    pred_msg = "Model not loaded."
+    pred_msg = "ML Model Target: Pending Training"
+    
     if MODEL_PATH.exists():
         try:
             model = joblib.load(MODEL_PATH)
             
-            # CRITICAL: Feature order must match training exactly
+            # CRITICAL: Feature order must match trainer.py exactly
             features = ['Close', 'rsi', 'macd', 'macd_signal', 'sma_50', 'sma_200', 'atr']
             
-            # Reshape for Sklearn/XGBoost (1 row, N columns)
+            # Extract features for the latest day and reshape for XGBoost
             input_df = pd.DataFrame([latest[features]])
             
+            # Predict the next day's close
             pred = model.predict(input_df)[0]
-            pred_msg = f"ML Model predicts next Close: ${pred:.2f}"
+            pred_msg = f"ML Model Target: ${pred:.2f}"
+            
         except Exception as e:
             print(f"⚠️ Model Inference Failed: {e}")
-            pred_msg = f"Model Error: {str(e)}"
+            pred_msg = f"ML Model Target: Error loading model"
     
     # 4. Build Metrics Dictionary (For the UI Cards)
     metrics = {
@@ -70,11 +61,11 @@ def get_technical_analysis(ticker: str, period="1y"):
     signals_output = interpret_signals(latest['Close'], metrics)
     signals = signals_output['signals']
     
-    # Append the ML prediction as a signal
+    # Append the ML prediction as a signal so the UI can parse it for the metric card
     signals.append(pred_msg)
     
     # 6. Prepare Chart Data (OHLC + SMAs) for Plotly
-    # We take the last 120 days for a clean, zoomed-in view
+    # Limit to the last 120 days for a clean, zoomed-in dashboard view
     recent = df.tail(120)
     
     chart_data = {
@@ -93,8 +84,7 @@ def get_technical_analysis(ticker: str, period="1y"):
         "chart_data": chart_data
     }
 
-# --- Test Block ---
 if __name__ == "__main__":
     import json
-    # Run this file directly to test if DB reading works
+    # Run this file directly to test the pipeline
     print(json.dumps(get_technical_analysis("AAPL"), indent=2, default=str))
