@@ -29,3 +29,4 @@ sqlalchemy
 vaderSentiment
 newsapi-python
 plotly
+streamlit-antd-components==0.3.2
