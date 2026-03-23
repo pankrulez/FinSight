@@ -3,7 +3,6 @@ import os
 import streamlit as st
 import plotly.graph_objects as go
 import yfinance as yf
-import streamlit_antd_components as sac # NEW: Enterprise UI library
 
 # --- SQLITE FOR STREAMLIT CLOUD ---
 try:
@@ -25,9 +24,30 @@ from src.ml_engine.features import add_technical_indicators
 # --- PAGE CONFIG ---
 st.set_page_config(layout="wide", page_title="FinSight Pro", page_icon="📈")
 
-# --- CUSTOM HTML COMPONENTS ---
+# --- CUSTOM CSS ---
+st.markdown("""
+    <style>
+    /* Main Background & Padding */
+    .stApp { background-color: #0b0f19; }
+    .block-container { padding-top: 2rem; }
+    
+    /* Smooth out tabs */
+    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: transparent;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- BULLETPROOF CUSTOM HTML COMPONENTS ---
 def render_custom_metric(title, value, subtitle, trend="neutral"):
-    """Renders a highly styled, enterprise-grade metric card."""
+    """Renders a styled metric card. HTML is squashed to prevent Markdown parser errors."""
     if trend == "up":
         trend_color = "#10b981" # Emerald green
         icon = "▲"
@@ -38,26 +58,8 @@ def render_custom_metric(title, value, subtitle, trend="neutral"):
         trend_color = "#8b5cf6" # Purple/Neutral
         icon = "✦"
         
-    html = f"""
-    <div style="
-        background-color: #111827;
-        border: 1px solid #1f2937; 
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        font-family: 'Inter', sans-serif;
-    ">
-        <div style="color: #9ca3af; font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">
-            {title}
-        </div>
-        <div style="color: #f3f4f6; font-size: 1.875rem; font-weight: 700; margin-bottom: 8px;">
-            {value}
-        </div>
-        <div style="color: {trend_color}; font-size: 0.875rem; font-weight: 500; display: flex; align-items: center; gap: 4px;">
-            <span>{icon}</span> {subtitle}
-        </div>
-    </div>
-    """
+    # Squashed HTML string prevents Streamlit from breaking the tags
+    html = f"""<div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); font-family: 'Inter', sans-serif;"><div style="color: #9ca3af; font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">{title}</div><div style="color: #f3f4f6; font-size: 1.875rem; font-weight: 700; margin-bottom: 8px;">{value}</div><div style="color: {trend_color}; font-size: 0.875rem; font-weight: 500; display: flex; align-items: center; gap: 4px;"><span>{icon}</span> {subtitle}</div></div>"""
     st.markdown(html, unsafe_allow_html=True)
 
 # --- CACHING LOGIC ---
@@ -103,22 +105,12 @@ def render_backtest_chart(backtest_res):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-# --- LAYOUT ARCHITECTURE ---
+# --- SIDEBAR CONTROL PANEL ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2422/2422796.png", width=50) # Placeholder logo
-    st.markdown("### FinSight Pro")
+    st.markdown("### ⚡ FinSight Pro")
     st.caption("Intelligence Engine v2.1")
     st.divider()
     
-    # Using Ant Design Menu for App Navigation
-    selected_view = sac.menu([
-        sac.MenuItem('Dashboard', icon='grid-1x2-fill'),
-        sac.MenuItem('Strategy Backtest', icon='graph-up-arrow'),
-        sac.MenuItem('Investment Memo', icon='file-earmark-richtext-fill'),
-        sac.MenuItem('Developer Data', icon='terminal-fill'),
-    ], size='md', variant='filled', color='green', open_all=True)
-    
-    st.divider()
     st.markdown("#### Market Parameters")
     mode = st.radio("Asset Class", ["Stocks", "Crypto", "Custom"], label_visibility="collapsed")
     if mode == "Custom": ticker = st.text_input("Symbol", "AMD").upper()
@@ -136,6 +128,11 @@ if 'active_ticker' in st.session_state:
     
     st.title(f"{active_ticker} Market Intelligence")
     
+    # BRINGING THE TABS BACK
+    tab_dash, tab_backtest, tab_report, tab_dev = st.tabs([
+        "🚀 Dashboard", "📈 Strategy Backtest", "📝 Investment Memo", "🛠️ Developer Data"
+    ])
+    
     with st.spinner(f"Aggregating real-time data for {active_ticker}..."):
         try:
             result = run_analysis_cached(active_ticker)
@@ -143,9 +140,8 @@ if 'active_ticker' in st.session_state:
             metrics, signals = quant.get('metrics', {}), quant.get('signals', [])
             backtest_results = perform_backtest(active_ticker)
 
-            # --- VIEW ROUTING ---
-            if selected_view == 'Dashboard':
-                # Custom HTML Metric Grid
+            # --- TAB 1: DASHBOARD ---
+            with tab_dash:
                 st.markdown("<br>", unsafe_allow_html=True)
                 c1, c2, c3, c4 = st.columns(4)
                 
@@ -155,8 +151,10 @@ if 'active_ticker' in st.session_state:
                     s_score = sent.get('score', 0)
                     render_custom_metric("News Sentiment", f"{s_score:.2f}", sent.get('label', 'Neutral'), "up" if s_score > 0 else "down")
                 with c3:
-                    pred = next((s for s in signals if "ML Model" in s), "N/A:").split(":")[-1].strip()
-                    render_custom_metric("AI Target", pred, "XGBoost Forecast", "up" if "1" else "down") # Adjust logic based on your model
+                    # Safely extract prediction to avoid HTML breaks
+                    pred_signal = next((s for s in signals if "ML Model" in s), None)
+                    pred = pred_signal.split(":")[-1].strip() if pred_signal else "Pending"
+                    render_custom_metric("AI Target", pred, "XGBoost Forecast", "up" if "1" else "down") 
                 with c4:
                     rsi = metrics.get('rsi', 0)
                     render_custom_metric("RSI Momentum", f"{rsi:.1f}", "Overbought" if rsi>70 else "Oversold" if rsi<30 else "Neutral", "up" if rsi < 30 else "down")
@@ -172,15 +170,18 @@ if 'active_ticker' in st.session_state:
                     
                 with insight_col:
                     st.markdown("#### Algorithmic Signals")
+                    # Reverted to native Streamlit alerts for perfect visibility
                     for s in signals:
-                        if "Bullish" in s: sac.alert(s, color='success', variant='light', icon=True, size='sm')
-                        elif "Bearish" in s: sac.alert(s, color='error', variant='light', icon=True, size='sm')
+                        if "Bullish" in s: st.success(s)
+                        elif "Bearish" in s: st.error(s)
+                        else: st.info(s)
                     
                     st.markdown("<br>#### Catalyst Drivers", unsafe_allow_html=True)
                     for h in sent.get('top_headlines', [])[:3]: 
-                        sac.alert(h, color='info', variant='quote-light', size='sm')
+                        st.info(f"📰 {h}")
 
-            elif selected_view == 'Strategy Backtest':
+            # --- TAB 2: BACKTEST ---
+            with tab_backtest:
                 if backtest_results and "error" not in backtest_results:
                     c1, c2, c3 = st.columns(3)
                     strat_ret = float(backtest_results['strategy_return_pct'])
@@ -192,18 +193,19 @@ if 'active_ticker' in st.session_state:
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     render_backtest_chart(backtest_results)
-                    sac.alert("Strategy Logic: Buy when SMA 50 > SMA 200 (Golden Cross). Move to Cash when SMA 50 < SMA 200.", color='dark', variant='quote')
+                    st.info("Strategy Logic: Buy when SMA 50 > SMA 200 (Golden Cross). Move to Cash when SMA 50 < SMA 200.")
                 else:
                     st.error("Backtest failed. Not enough historical data.")
 
-            elif selected_view == 'Investment Memo':
+            # --- TAB 3: REPORT ---
+            with tab_report:
                 st.markdown(result['final_report'])
 
-            elif selected_view == 'Developer Data':
+            # --- TAB 4: DEVELOPER ---
+            with tab_dev:
                 st.json(result)
 
         except Exception as e:
             st.error(f"Analysis Failed: {e}")
 else:
-    # A clean landing state
     st.info("👈 Configure your asset parameters in the sidebar and initialize the engine.")
