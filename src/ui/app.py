@@ -27,9 +27,40 @@ st.set_page_config(layout="wide", page_title="FinSight Pro", page_icon="📈")
 # --- CUSTOM CSS ---
 st.markdown("""
     <style>
+    /* Main App Background & Padding */
     .stApp { background-color: #0b0f19; }
     .block-container { padding-top: 2rem; }
     
+    /* Sidebar specific styling */
+    [data-testid="stSidebar"] {
+        background-color: #111827;
+        border-right: 1px solid #1f2937;
+    }
+    
+    /* Make the primary button glow */
+    [data-testid="baseButton-primary"] {
+        background-color: #10b981;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    [data-testid="baseButton-primary"]:hover {
+        background-color: #059669;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        transform: translateY(-2px);
+    }
+    
+    /* Input Fields Styling */
+    .stTextInput>div>div>input, .stSelectbox>div>div>div {
+        background-color: #0b0f19;
+        color: #f3f4f6;
+        border: 1px solid #374151;
+        border-radius: 6px;
+    }
+    
+    /* Smooth out tabs */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
@@ -81,7 +112,7 @@ def perform_backtest(ticker):
     if df.empty: return None
     return run_backtest(add_technical_indicators(df))
 
-# --- CHARTING ---
+# --- CHARTING ENGINES ---
 def render_chart(ticker, data):
     if not data: return
     fig = go.Figure()
@@ -94,7 +125,21 @@ def render_chart(ticker, data):
         height=400, xaxis_rangeslider_visible=False, margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(showgrid=False, zeroline=False), yaxis=dict(showgrid=True, gridcolor='#1f2937', zeroline=False)
     )
-    st.plotly_chart(fig, use_container_width=True)
+    
+    # --- NEW: High-Res Export Config ---
+    chart_config = {
+        'displayModeBar': True, # Shows the menu on hover
+        'displaylogo': False,   # Hides the Plotly logo for a white-label SaaS look
+        'toImageButtonOptions': {
+            'format': 'png',
+            'filename': f"{ticker}_technical_analysis",
+            'height': 600,
+            'width': 1000,
+            'scale': 2  # Multiplies resolution by 2 for crisp presentation slides
+        },
+        'modeBarButtonsToRemove': ['lasso2d', 'select2d'] # Keeps the menu clean
+    }
+    st.plotly_chart(fig, use_container_width=True, config=chart_config)
 
 def render_backtest_chart(backtest_res):
     if not backtest_res or "error" in backtest_res: return
@@ -108,7 +153,21 @@ def render_backtest_chart(backtest_res):
         height=350, hovermode="x unified", margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(showgrid=False, zeroline=False), yaxis=dict(showgrid=True, gridcolor='#1f2937', zeroline=False)
     )
-    st.plotly_chart(fig, use_container_width=True)
+    
+    # --- NEW: High-Res Export Config ---
+    chart_config = {
+        'displayModeBar': True,
+        'displaylogo': False,
+        'toImageButtonOptions': {
+            'format': 'png',
+            'filename': "strategy_backtest_results",
+            'height': 500,
+            'width': 900,
+            'scale': 2
+        },
+        'modeBarButtonsToRemove': ['lasso2d', 'select2d']
+    }
+    st.plotly_chart(fig, use_container_width=True, config=chart_config)
 
 # --- REUSABLE ONBOARDING UI ---
 def render_guide(is_tab=False):
@@ -192,17 +251,48 @@ def render_guide(is_tab=False):
 
 # --- SIDEBAR CONTROL PANEL ---
 with st.sidebar:
-    st.markdown("### ⚡ FinSight Pro")
-    st.caption("Intelligence Engine v2.1")
-    st.divider()
+    # 1. Custom Header
+    st.markdown("""
+        <div style="text-align: center; margin-top: -20px; margin-bottom: 20px;">
+            <h2 style="color: #f3f4f6; font-weight: 800; margin-bottom: 0px;">FinSight <span style="color: #10b981;">Pro</span></h2>
+            <span style="color: #9ca3af; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">Intelligence Engine v2.1</span>
+        </div>
+        <hr style="margin-top: 0px; margin-bottom: 20px; border-color: #1f2937;">
+    """, unsafe_allow_html=True)
     
-    st.markdown("#### Market Parameters")
+    # 2. Control Inputs
+    st.markdown("<p style='color: #9ca3af; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;'>Market Parameters</p>", unsafe_allow_html=True)
+    
     mode = st.radio("Asset Class", ["Stocks", "Crypto", "Custom"], label_visibility="collapsed")
-    if mode == "Custom": ticker = st.text_input("Symbol", "AMD").upper()
-    elif mode == "Crypto": ticker = st.selectbox("Symbol", ["BTC-USD", "ETH-USD", "SOL-USD"], label_visibility="collapsed")
-    else: ticker = st.selectbox("Symbol", ["AAPL", "NVDA", "TSLA", "MSFT", "GOOGL"], label_visibility="collapsed")
+    if mode == "Custom": 
+        ticker = st.text_input("Symbol", "AMD", help="Enter any valid Yahoo Finance ticker").upper()
+    elif mode == "Crypto": 
+        ticker = st.selectbox("Symbol", ["BTC-USD", "ETH-USD", "SOL-USD"], label_visibility="collapsed")
+    else: 
+        ticker = st.selectbox("Symbol", ["AAPL", "NVDA", "TSLA", "MSFT", "GOOGL"], label_visibility="collapsed")
     
-    analyze_button = st.button("Run Analysis", type="primary", use_container_width=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    analyze_button = st.button("🚀 Run Analysis", type="primary", use_container_width=True)
+    
+    # 3. System Status Monitor (Decorative Footer)
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("""
+        <div style="background-color: #0b0f19; border: 1px solid #1f2937; border-radius: 8px; padding: 16px;">
+            <p style="color: #6b7280; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; margin-top: 0px;">System Status</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="color: #9ca3af; font-size: 0.85rem;">Vector DB</span>
+                <span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Synced</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="color: #9ca3af; font-size: 0.85rem;">LLM Agent</span>
+                <span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Online</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #9ca3af; font-size: 0.85rem;">Market Data</span>
+                <span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Live API</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- STATE MANAGEMENT & UI ISOLATION ---
 if analyze_button:

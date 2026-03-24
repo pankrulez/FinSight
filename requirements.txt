@@ -3,7 +3,7 @@ streamlit
 python-dotenv
 pysqlite3-binary
 
-# --- AI Framework ---
+# --- GenAI & Agent Architecture ---
 langchain
 langchain-community
 langchain-core
@@ -30,3 +30,8 @@ vaderSentiment
 newsapi-python
 plotly
 streamlit-antd-components==0.3.2
+
+# --- API Backend (Optional) ---
+fastapi==0.110.0
+uvicorn==0.29.0
+pydantic==2.6.4
