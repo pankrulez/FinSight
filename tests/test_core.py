@@ -1,6 +1,11 @@
 # tests/test_core.py
 import pytest
+import sys
+import os
 from src.ml_engine.features import interpret_signals
+
+# Ensure the src module can be found
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 def test_rsi_signals():
     # Test that RSI > 70 triggers a 'Sell' warning
