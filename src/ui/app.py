@@ -33,11 +33,27 @@ st.set_page_config(layout="wide", page_title="FinSight Pro", page_icon="📈")
 
 st.markdown("""
     <style>
+    /* Main Backgrounds */
     .stApp { background-color: #0b0f19; }
     .block-container { padding-top: 2rem; }
     [data-testid="stSidebar"] { background-color: #111827; border-right: 1px solid #1f2937; }
-    [data-testid="baseButton-primary"] { background-color: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
-    [data-testid="baseButton-primary"]:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); transform: translateY(-2px); }
+    
+    /* NEW: Fintech Blue Primary Buttons */
+    [data-testid="baseButton-primary"] { 
+        background-color: #3b82f6; /* Blue 500 */
+        color: white; 
+        border: none; 
+        border-radius: 8px; 
+        font-weight: 600; 
+        transition: all 0.3s ease; 
+    }
+    [data-testid="baseButton-primary"]:hover { 
+        background-color: #2563eb; /* Blue 600 */
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); /* Soft Blue Glow */
+        transform: translateY(-2px); 
+    }
+    
+    /* Inputs & Tabs */
     .stTextInput>div>div>input, .stSelectbox>div>div>div { background-color: #0b0f19; color: #f3f4f6; border: 1px solid #374151; border-radius: 6px; }
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; border-radius: 4px 4px 0px 0px; gap: 1px; padding-top: 10px; padding-bottom: 10px; }

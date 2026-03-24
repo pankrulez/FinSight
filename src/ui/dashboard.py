@@ -34,5 +34,5 @@ def render_dashboard_tab(active_ticker, eli5, quant, sent, metrics, signals):
             if "Bullish" in s: st.success(s)
             elif "Bearish" in s: st.error(s)
             else: st.info(s)
-        st.markdown("<br>#### Catalyst Drivers", unsafe_allow_html=True)
+        st.markdown("#### Catalyst Drivers", unsafe_allow_html=True)
         for h in sent.get('top_headlines', [])[:3]: st.info(f"📰 {h}")

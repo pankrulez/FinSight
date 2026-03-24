@@ -1,8 +1,8 @@
 [theme]
-primaryColor = "#00ff00" # Your AI Strategy green
-backgroundColor = "#0e1117"
-secondaryBackgroundColor = "#1a1c24"
-textColor = "#ffffff"
+primaryColor = "#3b82f6" # Your AI Strategy green
+backgroundColor = "#0b0f19"
+secondaryBackgroundColor = "#111827"
+textColor = "#f3f4f6"
 font = "sans serif" # Or "monospace" for a terminal feel
 
 [client]
