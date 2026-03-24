@@ -1,7 +1,6 @@
 import sys
 import os
 import streamlit as st
-import plotly.graph_objects as go
 import yfinance as yf
 
 # --- SQLITE FOR STREAMLIT CLOUD ---
@@ -16,93 +15,40 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 if project_root not in sys.path:
     sys.path.append(project_root)
 
+# --- BACKEND IMPORTS ---
 from src.agents.graph import build_graph
 from src.agents.state import AgentState
 from src.ml_engine.backtest import run_backtest
 from src.ml_engine.features import add_technical_indicators
 
-# --- PAGE CONFIG ---
+# --- FRONTEND IMPORTS (Now loaded directly from the src.ui folder) ---
+from src.ui.dashboard import render_dashboard_tab
+from src.ui.backtest import render_backtest_tab
+from src.ui.report import render_report_tab
+from src.ui.developer import render_developer_tab
+from src.ui.guide import render_guide
+
+# --- PAGE CONFIG & CSS ---
 st.set_page_config(layout="wide", page_title="FinSight Pro", page_icon="📈")
 
-# --- CUSTOM CSS ---
 st.markdown("""
     <style>
-    /* Main App Background & Padding */
     .stApp { background-color: #0b0f19; }
     .block-container { padding-top: 2rem; }
-    
-    /* Sidebar specific styling */
-    [data-testid="stSidebar"] {
-        background-color: #111827;
-        border-right: 1px solid #1f2937;
-    }
-    
-    /* Make the primary button glow */
-    [data-testid="baseButton-primary"] {
-        background-color: #10b981;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    [data-testid="baseButton-primary"]:hover {
-        background-color: #059669;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-        transform: translateY(-2px);
-    }
-    
-    /* Input Fields Styling */
-    .stTextInput>div>div>input, .stSelectbox>div>div>div {
-        background-color: #0b0f19;
-        color: #f3f4f6;
-        border: 1px solid #374151;
-        border-radius: 6px;
-    }
-    
-    /* Smooth out tabs */
+    [data-testid="stSidebar"] { background-color: #111827; border-right: 1px solid #1f2937; }
+    [data-testid="baseButton-primary"] { background-color: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
+    [data-testid="baseButton-primary"]:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); transform: translateY(-2px); }
+    .stTextInput>div>div>input, .stSelectbox>div>div>div { background-color: #0b0f19; color: #f3f4f6; border: 1px solid #374151; border-radius: 6px; }
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: transparent;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
-    }
+    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; border-radius: 4px 4px 0px 0px; gap: 1px; padding-top: 10px; padding-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
-
-# --- BULLETPROOF CUSTOM HTML COMPONENTS ---
-def render_custom_metric(title, value, subtitle, trend="neutral", tooltip=""):
-    """Renders a styled metric card with native HTML tooltips."""
-    if trend == "up":
-        trend_color = "#10b981"
-        icon = "▲"
-    elif trend == "down":
-        trend_color = "#ef4444"
-        icon = "▼"
-    else:
-        trend_color = "#8b5cf6"
-        icon = "✦"
-        
-    html = f"""<div title="{tooltip}" style="background-color: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); font-family: 'Inter', sans-serif;"><div style="color: #9ca3af; font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">{title}</div><div style="color: #f3f4f6; font-size: 1.875rem; font-weight: 700; margin-bottom: 8px;">{value}</div><div style="color: {trend_color}; font-size: 0.875rem; font-weight: 500; display: flex; align-items: center; gap: 4px;"><span>{icon}</span> {subtitle}</div></div>"""
-    st.markdown(html, unsafe_allow_html=True)
 
 # --- CACHING LOGIC ---
 @st.cache_data(ttl=3600, show_spinner=False)
 def run_analysis_cached(ticker):
     app = build_graph()
-    inputs: AgentState = {
-        "ticker": ticker, 
-        "user_query": "Analyze", 
-        "quant_data": {}, 
-        "rag_data": {}, 
-        "sentiment_data": {}, 
-        "final_report": "",
-        "eli5_summary": ""
-    }
+    inputs: AgentState = {"ticker": ticker, "user_query": "Analyze", "quant_data": {}, "rag_data": {}, "sentiment_data": {}, "final_report": "", "eli5_summary": ""}
     return app.invoke(inputs)
 
 @st.cache_data(ttl=3600)
@@ -112,146 +58,8 @@ def perform_backtest(ticker):
     if df.empty: return None
     return run_backtest(add_technical_indicators(df))
 
-# --- CHARTING ENGINES ---
-def render_chart(ticker, data):
-    if not data: return
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(x=data['dates'], open=data['open'], high=data['high'], low=data['low'], close=data['close'], name='OHLC'))
-    fig.add_trace(go.Scatter(x=data['dates'], y=data['sma_50'], line=dict(color='#f59e0b', width=1.5), name='SMA 50'))
-    fig.add_trace(go.Scatter(x=data['dates'], y=data['sma_200'], line=dict(color='#8b5cf6', width=1.5), name='SMA 200'))
-    
-    fig.update_layout(
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#e2e8f0"),
-        height=400, xaxis_rangeslider_visible=False, margin=dict(l=0, r=0, t=10, b=0),
-        xaxis=dict(showgrid=False, zeroline=False), yaxis=dict(showgrid=True, gridcolor='#1f2937', zeroline=False)
-    )
-    
-    # --- NEW: High-Res Export Config ---
-    chart_config = {
-        'displayModeBar': True, # Shows the menu on hover
-        'displaylogo': False,   # Hides the Plotly logo for a white-label SaaS look
-        'toImageButtonOptions': {
-            'format': 'png',
-            'filename': f"{ticker}_technical_analysis",
-            'height': 600,
-            'width': 1000,
-            'scale': 2  # Multiplies resolution by 2 for crisp presentation slides
-        },
-        'modeBarButtonsToRemove': ['lasso2d', 'select2d'] # Keeps the menu clean
-    }
-    st.plotly_chart(fig, use_container_width=True, config=chart_config)
-
-def render_backtest_chart(backtest_res):
-    if not backtest_res or "error" in backtest_res: return
-    data = backtest_res['comparison_data']
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data['dates'], y=data['market_curve'], mode='lines', name='Buy & Hold', line=dict(color='#6b7280', dash='dash')))
-    fig.add_trace(go.Scatter(x=data['dates'], y=data['strategy_curve'], mode='lines', name='AI Strategy', line=dict(color='#10b981', width=2.5)))
-
-    fig.update_layout(
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#e2e8f0"),
-        height=350, hovermode="x unified", margin=dict(l=0, r=0, t=10, b=0),
-        xaxis=dict(showgrid=False, zeroline=False), yaxis=dict(showgrid=True, gridcolor='#1f2937', zeroline=False)
-    )
-    
-    # --- NEW: High-Res Export Config ---
-    chart_config = {
-        'displayModeBar': True,
-        'displaylogo': False,
-        'toImageButtonOptions': {
-            'format': 'png',
-            'filename': "strategy_backtest_results",
-            'height': 500,
-            'width': 900,
-            'scale': 2
-        },
-        'modeBarButtonsToRemove': ['lasso2d', 'select2d']
-    }
-    st.plotly_chart(fig, use_container_width=True, config=chart_config)
-
-# --- REUSABLE ONBOARDING UI ---
-def render_guide(is_tab=False):
-    """Renders the onboarding grid. Adapts layout based on where it is displayed."""
-    if not is_tab:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("""
-            <div style="text-align: center; margin-bottom: 40px; font-family: 'Inter', sans-serif;">
-                <h1 style="color: #f3f4f6; font-size: 3.5rem; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.02em;">
-                    FinSight <span style="color: #10b981;">Pro</span>
-                </h1>
-                <p style="color: #9ca3af; font-size: 1.2rem; font-weight: 400;">Your AI-Powered Quantitative Market Analyst</p>
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("### 📖 How to use FinSight Pro")
-        st.caption("Refer back to these steps anytime to maximize your analysis.")
-        st.markdown("<br>", unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2, gap="large")
-    
-    with col1:
-        st.markdown("""
-        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #3b82f6; border-radius: 12px; padding: 24px; height: 180px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">🎯</span>
-                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">1. Select Your Asset</span>
-            </div>
-            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
-                Use the sidebar panel on the left to choose a standard Stock, Cryptocurrency, or enter a Custom Ticker symbol (e.g., AMD).
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #10b981; border-radius: 12px; padding: 24px; height: 180px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">🧠</span>
-                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">3. Explore AI Insights</span>
-            </div>
-            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
-                Navigate through the tabs to view algorithmic charts, backtest strategies, and read plain-English GenAI translations of complex metrics.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #f59e0b; border-radius: 12px; padding: 24px; height: 180px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">⚡</span>
-                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">2. Initialize Engine</span>
-            </div>
-            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
-                Click the primary <b style="color: #e2e8f0;">Run Analysis</b> button. The system will fetch live market data and execute the XGBoost machine learning forecasts.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div style="background-color: #111827; border: 1px solid #1f2937; border-top: 4px solid #8b5cf6; border-radius: 12px; padding: 24px; height: 180px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                <span style="font-size: 1.5rem;">🔄</span>
-                <span style="color: #f3f4f6; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;">4. Update Knowledge</span>
-            </div>
-            <div style="color: #9ca3af; font-size: 0.95rem; line-height: 1.6; font-family: 'Inter', sans-serif;">
-                Go to the <b style="color: #e2e8f0;">Developer Data</b> tab and click <i>Update AI Knowledge Base</i> to fetch the absolute latest news for the memo.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    if not is_tab:
-        st.markdown("""
-            <div style="text-align: center; margin-top: 50px;">
-                <span style="background-color: rgba(16, 185, 129, 0.1); color: #10b981; padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 1rem; border: 1px solid rgba(16, 185, 129, 0.2); font-family: 'Inter', sans-serif; letter-spacing: 0.02em;">
-                    👈 Configure your asset in the sidebar to begin
-                </span>
-            </div>
-        """, unsafe_allow_html=True)
-
-
 # --- SIDEBAR CONTROL PANEL ---
 with st.sidebar:
-    # 1. Custom Header
     st.markdown("""
         <div style="text-align: center; margin-top: -20px; margin-bottom: 20px;">
             <h2 style="color: #f3f4f6; font-weight: 800; margin-bottom: 0px;">FinSight <span style="color: #10b981;">Pro</span></h2>
@@ -260,37 +68,22 @@ with st.sidebar:
         <hr style="margin-top: 0px; margin-bottom: 20px; border-color: #1f2937;">
     """, unsafe_allow_html=True)
     
-    # 2. Control Inputs
     st.markdown("<p style='color: #9ca3af; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;'>Market Parameters</p>", unsafe_allow_html=True)
-    
     mode = st.radio("Asset Class", ["Stocks", "Crypto", "Custom"], label_visibility="collapsed")
-    if mode == "Custom": 
-        ticker = st.text_input("Symbol", "AMD", help="Enter any valid Yahoo Finance ticker").upper()
-    elif mode == "Crypto": 
-        ticker = st.selectbox("Symbol", ["BTC-USD", "ETH-USD", "SOL-USD"], label_visibility="collapsed")
-    else: 
-        ticker = st.selectbox("Symbol", ["AAPL", "NVDA", "TSLA", "MSFT", "GOOGL"], label_visibility="collapsed")
+    if mode == "Custom": ticker = st.text_input("Symbol", "AMD", help="Enter any valid Yahoo Finance ticker").upper()
+    elif mode == "Crypto": ticker = st.selectbox("Symbol", ["BTC-USD", "ETH-USD", "SOL-USD"], label_visibility="collapsed")
+    else: ticker = st.selectbox("Symbol", ["AAPL", "NVDA", "TSLA", "MSFT", "GOOGL"], label_visibility="collapsed")
     
     st.markdown("<br>", unsafe_allow_html=True)
     analyze_button = st.button("🚀 Run Analysis", type="primary", use_container_width=True)
     
-    # 3. System Status Monitor (Decorative Footer)
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     st.markdown("""
         <div style="background-color: #0b0f19; border: 1px solid #1f2937; border-radius: 8px; padding: 16px;">
             <p style="color: #6b7280; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; margin-top: 0px;">System Status</p>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="color: #9ca3af; font-size: 0.85rem;">Vector DB</span>
-                <span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Synced</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="color: #9ca3af; font-size: 0.85rem;">LLM Agent</span>
-                <span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Online</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #9ca3af; font-size: 0.85rem;">Market Data</span>
-                <span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Live API</span>
-            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><span style="color: #9ca3af; font-size: 0.85rem;">Vector DB</span><span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Synced</span></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><span style="color: #9ca3af; font-size: 0.85rem;">LLM Agent</span><span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Online</span></div>
+            <div style="display: flex; justify-content: space-between; align-items: center;"><span style="color: #9ca3af; font-size: 0.85rem;">Market Data</span><span style="color: #10b981; font-size: 0.85rem; font-weight: 600;">● Live API</span></div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -302,7 +95,6 @@ if 'active_ticker' in st.session_state:
     active_ticker = st.session_state['active_ticker']
     st.title(f"{active_ticker} Market Intelligence")
     
-    # 1. STRICT DATA FETCHING BLOCK (Outside of UI rendering)
     success = False
     with st.spinner(f"Aggregating real-time data for {active_ticker}..."):
         try:
@@ -314,134 +106,27 @@ if 'active_ticker' in st.session_state:
         except Exception as e:
             error_message = str(e)
 
-    # 2. STRICT UI RENDERING BLOCK (Only runs if data fetching succeeded)
     if success:
         tab_dash, tab_backtest, tab_report, tab_dev, tab_guide = st.tabs([
             "🚀 Dashboard", "📈 Strategy Backtest", "📝 Investment Memo", "🛠️ Developer Data", "📖 Guide"
         ])
         
-        # --- TAB 1: DASHBOARD ---
         with tab_dash:
-            st.markdown("<br>", unsafe_allow_html=True)
             eli5 = result.get('eli5_summary', "Update your src/agents/graph.py to generate the plain English summary!")
-            st.info(f"💡 **AI Translation:** {eli5}")
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            c1, c2, c3, c4 = st.columns(4)
-            with c1: render_custom_metric("Current Price", f"${metrics.get('current_price',0):.2f}", "Live Data", "neutral", "The most recent trading price.")
-            with c2:
-                s_score = sent.get('score', 0)
-                render_custom_metric("News Sentiment", f"{s_score:.2f}", sent.get('label', 'Neutral'), "up" if s_score > 0 else "down", "Analyzes recent news articles.")
-            with c3:
-                pred_signal = next((s for s in signals if "ML Model" in s), None)
-                pred = pred_signal.split(":")[-1].strip() if pred_signal else "Pending"
-                render_custom_metric("AI Target", pred, "XGBoost Forecast", "up" if "1" else "down", "Prediction for next closing price.") 
-            with c4:
-                rsi = metrics.get('rsi', 0)
-                render_custom_metric("RSI Momentum", f"{rsi:.1f}", "Overbought" if rsi>70 else "Oversold" if rsi<30 else "Neutral", "up" if rsi < 30 else "down", "Relative Strength Index.")
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("📚 What do these numbers actually mean?", expanded=False):
-                st.markdown("""
-                * **AI Target:** We use an advanced algorithm (XGBoost) to guess where the price is heading next. 
-                * **RSI:** If it's **Overbought** (above 70), the stock is moving too fast. If it's **Oversold** (below 30), it might be ready to bounce back up.
-                * **Sentiment:** We read thousands of news headlines using GenAI. Positive score = good news.
-                """)
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            chart_col, insight_col = st.columns([2.8, 1.2], gap="large")
-            with chart_col:
-                st.markdown("#### Price Action & Moving Averages")
-                render_chart(active_ticker, quant.get('chart_data', {}))
-            with insight_col:
-                st.markdown("#### Algorithmic Signals")
-                for s in signals:
-                    if "Bullish" in s: st.success(s)
-                    elif "Bearish" in s: st.error(s)
-                    else: st.info(s)
-                st.markdown("<br>#### Catalyst Drivers", unsafe_allow_html=True)
-                for h in sent.get('top_headlines', [])[:3]: st.info(f"📰 {h}")
-
-        # --- TAB 2: BACKTEST ---
+            render_dashboard_tab(active_ticker, eli5, quant, sent, metrics, signals)
+        
         with tab_backtest:
-            if backtest_results and "error" not in backtest_results:
-                initial = float(backtest_results['initial_capital'])
-                final_strat = float(backtest_results['final_strategy_equity'])
-                final_market = float(backtest_results['final_market_equity'])
-                profit_diff = final_strat - final_market
-                
-                st.markdown("### 📖 The Plain English Translation")
-                if profit_diff > 0:
-                    st.success(f"If you had invested **\${initial:,.0f}** using this AI strategy 5 years ago, you would have **\${final_strat:,.0f}** today. That is **\${profit_diff:,.0f} more** than if you had just bought and held the stock.")
-                else:
-                    st.warning(f"If you had invested **\${initial:,.0f}** using this AI strategy 5 years ago, you would have **\${final_strat:,.0f}** today. For this specific stock, simply buying and holding the asset would have actually made you **\${abs(profit_diff):,.0f} more**.")
-                st.divider()
-
-                c1, c2, c3 = st.columns(3)
-                strat_ret = float(backtest_results['strategy_return_pct'])
-                market_ret = float(backtest_results['market_return_pct'])
-                with c1: render_custom_metric("Initial Capital", f"${initial:,.0f}", "Starting Balance", "neutral")
-                with c2: render_custom_metric("Strategy Return", f"{strat_ret}%", f"{strat_ret - market_ret:.2f}% Alpha", "up" if strat_ret > market_ret else "down")
-                with c3: render_custom_metric("Buy & Hold Return", f"{market_ret}%", "S&P Baseline", "neutral")
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                render_backtest_chart(backtest_results)
-                st.info("Strategy Logic: Buy when short-term trend (SMA 50) > long-term trend (SMA 200).")
-            else:
-                st.error("Backtest failed. Not enough historical data.")
-
-        # --- TAB 3: REPORT ---
-        with tab_report:
-            st.markdown("<br>", unsafe_allow_html=True)
-            head_col1, head_col2 = st.columns([3, 1])
-            with head_col1:
-                st.markdown(f"### 📑 Strategic Intelligence Memo: `{active_ticker}`")
-                st.caption(f"**DATE:** Live | **CLASSIFICATION:** Internal | **AUTHOR:** FinSight AI")
-            with head_col2:
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.download_button("📥 Download Memo (.md)", data=result['final_report'], file_name=f"{active_ticker}_Research_Memo.md", use_container_width=True)
-            st.divider()
-            with st.container(border=True):
-                st.markdown(result['final_report'])
-
-        # --- TAB 4: DEVELOPER ---
-        with tab_dev:
-            st.markdown("### ⚙️ System Operations")
-            from src.data_engine.ingestor_rag import ingest_fundamental_data
-            from src.ml_engine.trainer import train_model
+            render_backtest_tab(backtest_results)
             
-            op_col1, op_col2 = st.columns(2)
-            with op_col1:
-                with st.container(border=True):
-                    st.markdown("#### 📚 RAG Pipeline")
-                    if st.button(f"Update AI Knowledge Base", type="secondary", use_container_width=True):
-                        with st.spinner(f"Indexing live data for {active_ticker}..."):
-                            try:
-                                ingest_fundamental_data(active_ticker)
-                                st.success(f"Vector DB rebuilt for {active_ticker}!")
-                            except Exception as e:
-                                st.error(f"Ingestion failed: {e}")
-            with op_col2:
-                with st.container(border=True):
-                    st.markdown("#### 🧠 ML Pipeline")
-                    if st.button(f"Retrain XGBoost Model", type="primary", use_container_width=True):
-                        with st.spinner(f"Training ML model..."):
-                            try:
-                                metrics = train_model(active_ticker)
-                                if metrics.get("status") == "success": st.success(f"Model retrained! Margin of Error: ±${metrics['mean_absolute_error']}")
-                                else: st.error(metrics.get("message", "Unknown error."))
-                            except Exception as e:
-                                st.error(f"Training failed: {e}")
-            st.divider()
-            st.markdown("#### Raw System State Payload")
-            st.json(result)
-
-        # --- TAB 5: GUIDE ---
+        with tab_report:
+            render_report_tab(active_ticker, result.get('final_report', ''))
+            
+        with tab_dev:
+            render_developer_tab(active_ticker, result)
+            
         with tab_guide:
             render_guide(is_tab=True)
     else:
         st.error(f"Analysis Failed: {error_message}")
-        
 else:
-    # Shows the full Hero UI before the user clicks "Run Analysis"
     render_guide(is_tab=False)
