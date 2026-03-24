@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+import time
 import plotly.graph_objects as go
 from src.data_engine.ingestor_rag import ingest_fundamental_data
 from src.ml_engine.trainer import train_model
@@ -37,6 +38,12 @@ def render_developer_tab(active_ticker, result):
                         metrics = train_model(active_ticker, n_trees=trees, lr=learn_rate, max_d=depth)
                         if metrics.get("status") == "success": 
                             st.success(f"Model retrained! Margin of Error: ±${metrics['mean_absolute_error']}")
+                            
+                            # --- WIPE CACHE AND REBOOT UI ---
+                            time.sleep(1.5) # Pause briefly so the user sees the green success box
+                            st.cache_data.clear() # Destroy the old cached prediction
+                            st.rerun() # Force the entire app to reload instantly
+                            
                         else: 
                             st.error(metrics.get("message", "Unknown error."))
                     except Exception as e:
