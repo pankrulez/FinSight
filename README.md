@@ -1,7 +1,7 @@
 # 📈 FinSight Pro: Autonomous AI Financial Analyst
 
 [![Live Demo](https://img.shields.io/badge/Demo-Live_on_Streamlit-FF4B4B?style=for-the-badge&logo=streamlit)](https://finsight-investment-analyst.streamlit.app/)
-[![CI/CD](https://img.shields.io/github/actions/workflow/status/pankrulez/finsight-ai/ci.yml?style=for-the-badge&label=Build%20%26%20Test)](https://github.com/pankrulez/finsight-ai/actions)
+[![CI/CD](https://img.shields.io/github/actions/workflow/status/pankrulez/FinSight/ci.yml?style=for-the-badge&label=Build%20%26%20Test)](https://github.com/pankrulez/FinSight/actions)
 [![Python 3.10](https://img.shields.io/badge/Python-3.10-blue?style=for-the-badge&logo=python)](https://www.python.org/)
 
 **FinSight Pro** is an end-to-end, multi-agent financial intelligence platform. It bridges the gap between raw quantitative data and accessible financial literacy by combining **Machine Learning (XGBoost)**, **Vector Retrieval (ChromaDB)**, and **Generative AI (Llama-3 via Groq)** into a seamless, cloud-deployed dashboard.
@@ -50,7 +50,7 @@ graph TD
     F -->|Plotly Charts| I
 ```
 
-    ---
+---
 
 ## 🛠️ Tech Stack
 - **LLM & Orchestration**: LangChain, LangGraph, Groq API (Llama-3).
