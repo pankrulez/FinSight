@@ -33,14 +33,14 @@ st.set_page_config(layout="wide", page_title="FinSight Pro", page_icon="📈")
 
 st.markdown("""
     <style>
-    /* Main Backgrounds */
+    /* --- Main Backgrounds --- */
     .stApp { background-color: #0b0f19; }
     .block-container { padding-top: 2rem; }
     [data-testid="stSidebar"] { background-color: #111827; border-right: 1px solid #1f2937; }
     
-    /* NEW: Fintech Blue Primary Buttons */
+    /* --- Fintech Blue Primary Buttons --- */
     [data-testid="baseButton-primary"] { 
-        background-color: #3b82f6; /* Blue 500 */
+        background-color: #3b82f6; 
         color: white; 
         border: none; 
         border-radius: 8px; 
@@ -48,15 +48,49 @@ st.markdown("""
         transition: all 0.3s ease; 
     }
     [data-testid="baseButton-primary"]:hover { 
-        background-color: #2563eb; /* Blue 600 */
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); /* Soft Blue Glow */
+        background-color: #2563eb; 
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); 
         transform: translateY(-2px); 
     }
     
-    /* Inputs & Tabs */
-    .stTextInput>div>div>input, .stSelectbox>div>div>div { background-color: #0b0f19; color: #f3f4f6; border: 1px solid #374151; border-radius: 6px; }
+    /* --- 🎨 Premium Dropdown & Input Styling --- */
+    /* Target the input fields and select box borders */
+    .stTextInput>div>div>input, [data-baseweb="select"]>div { 
+        background-color: #0b0f19 !important; 
+        color: #f3f4f6 !important; 
+        border: 1px solid #374151 !important; 
+        border-radius: 6px !important; 
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    /* Add a subtle blue glow when the dropdown/input is clicked */
+    .stTextInput>div>div>input:focus, [data-baseweb="select"]>div:focus-within {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 1px #3b82f6 !important;
+    }
+    /* Style the dropdown menu that pops open */
+    [data-baseweb="popover"] > div {
+        background-color: #111827 !important;
+        border: 1px solid #374151 !important;
+        border-radius: 6px !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+    }
+    /* Style the individual dropdown options on hover */
+    ul[role="listbox"] li:hover {
+        background-color: #1f2937 !important;
+        color: #3b82f6 !important;
+    }
+    
+    /* --- Tabs --- */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; border-radius: 4px 4px 0px 0px; gap: 1px; padding-top: 10px; padding-bottom: 10px; }
+    .stTabs [data-baseweb="tab"] { 
+        height: 50px; 
+        white-space: pre-wrap; 
+        background-color: transparent; 
+        border-radius: 4px 4px 0px 0px; 
+        gap: 1px; 
+        padding-top: 10px; 
+        padding-bottom: 10px; 
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -93,7 +127,7 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     analyze_button = st.button("🚀 Run Analysis", type="primary", use_container_width=True)
     
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("""
         <div style="background-color: #0b0f19; border: 1px solid #1f2937; border-radius: 8px; padding: 16px;">
             <p style="color: #6b7280; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; margin-top: 0px;">System Status</p>
