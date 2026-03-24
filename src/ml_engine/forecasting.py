@@ -39,7 +39,8 @@ def get_technical_analysis(ticker: str, period="1y"):
             input_df = pd.DataFrame([latest[features]])
             
             # Predict the next day's close
-            pred = model.predict(input_df)[0]
+            pred_delta = model.predict(input_df)[0]
+            pred = latest['Close'] + pred_delta
             pred_msg = f"ML Model Target: ${pred:.2f}"
             
         except Exception as e:
